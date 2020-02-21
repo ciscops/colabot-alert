@@ -2,11 +2,10 @@
 Alerts WebEx Teams users with labs running over 48 hours
 
 ## Deploying locally with docker-compose
-# Environment Config
-
-# store your secrets and config variables in here
-# only invited collaborators will be able to see your .env values
-# reference these in your code with process.env.SECRET
+### Environment Config
+### store your secrets and config variables in here
+### only invited collaborators will be able to see your .env values
+### reference these in your code with process.env.SECRET
 ```
 ACCESS_TOKEN=[YOUR ACCESS TOKEN]
 SERVER_LIST=server1.example.com,server2.example.com,server3.example.com
