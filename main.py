@@ -149,4 +149,4 @@ if __name__ == '__main__':
                         message += "\nType 'help' to see how I can assist you"
                         web.send_message(message)
                         logging.info('User ' + k + ' : ' + message)
-    time.sleep(86400)
+        time.sleep(86400)
