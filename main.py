@@ -154,6 +154,8 @@ if __name__ == '__main__':
     MONGO_INITDB_ROOT_PASSWORD = os.environ['MONGO_INITDB_ROOT_PASSWORD']
     MONGO_SERVER = os.environ['MONGO_SERVER']
     MONGO_PORT = os.environ['MONGO_PORT']
+    MONGO_DB = os.environ['MONGO_DB']
+    MONGO_COLLECTIONS = os.environ['MONGO_COLLECTIONS']
     mongo_url = 'mongodb://' + MONGO_INITDB_ROOT_USERNAME + ':' + MONGO_INITDB_ROOT_PASSWORD + '@' + MONGO_SERVER + ':' + MONGO_PORT
 
     FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -170,8 +172,8 @@ if __name__ == '__main__':
         try:
             epoch_time_now = int(time.time())
             with pymongo.MongoClient(mongo_url) as client:
-                db = client['myproject']
-                posts = db['documents']
+                db = client[MONGO_DB]
+                posts = db[MONGO_COLLECTIONS]
 
                 for virl_server in virl_servers:
                     virl = VIRL(virl_username, virl_password, virl_server, alert_time_seconds)

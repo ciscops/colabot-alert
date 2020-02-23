@@ -15,6 +15,9 @@ MONGO_INITDB_ROOT_USERNAME=cisco
 MONGO_INITDB_ROOT_PASSWORD=password
 MONGO_SERVER=mongodb.example.com
 MONGO_PORT=27017
+MONGO_PORT=27017
+MONGO_DB=myproject
+MONGO_COLLECTIONS=documents
 # note .env is a shell file so there can't be spaces around =
 ```
 Build and run the bot:
