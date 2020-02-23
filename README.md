@@ -11,6 +11,10 @@ ACCESS_TOKEN=[YOUR ACCESS TOKEN]
 SERVER_LIST=server1.example.com,server2.example.com,server3.example.com
 VIRL_USERNAME=virl
 VIRL_PASSWORD=foo
+MONGO_INITDB_ROOT_USERNAME=cisco
+MONGO_INITDB_ROOT_PASSWORD=password
+MONGO_SERVER=mongodb.example.com
+MONGO_PORT=27017
 # note .env is a shell file so there can't be spaces around =
 ```
 Build and run the bot:
