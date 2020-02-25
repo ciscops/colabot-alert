@@ -18,6 +18,9 @@ MONGO_PORT=27017
 MONGO_PORT=27017
 MONGO_DB=myproject
 MONGO_COLLECTIONS=documents
+PROGRAM_LOOP_HOURS=4
+ALERT_TIMER_HOURS=24  # Hours before owner of lab needs to extend lab time
+DEAD_TIMER_HOURS=48  # Hours after owner was notified before lab is terminated
 # note .env is a shell file so there can't be spaces around =
 ```
 Build and run the bot:
