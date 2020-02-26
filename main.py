@@ -214,9 +214,9 @@ if __name__ == '__main__':
     virl_password = os.environ['VIRL_PASSWORD']
     virl_servers = os.environ['SERVER_LIST'].split(',')
 
-    program_loop_hours = int(os.environ['PROGRAM_LOOP_HOURS'])
-    alert_timer_hours = int(os.environ['ALERT_TIMER_HOURS'])  # default hours for lab without request for extension
-    dead_timer_hours = int(os.environ['DEAD_TIMER_HOURS'])  # hours after alert time until termination without extens
+    program_loop_hours = float(os.environ['PROGRAM_LOOP_HOURS'])
+    alert_timer_hours = float(os.environ['ALERT_TIMER_HOURS'])  # default hours for lab without request for extension
+    dead_timer_hours = float(os.environ['DEAD_TIMER_HOURS'])  # hours after alert time until termination without extens
 
     program_loop_seconds = program_loop_hours * 60 * 60
     alert_timer_seconds = alert_timer_hours * 60 * 60
