@@ -1,7 +1,6 @@
 import gc
 import pymongo
 import json
-import logging
 import time
 import os
 import requests
@@ -25,7 +24,6 @@ class VIRL:
         self.all_labs = list()
 
     def get_token(self):
-        logger = logging.getLogger(__name__)
         api_path = '/api/v0/authenticate'
         headers = {
             'Content-Type': 'application/json'
@@ -35,17 +33,16 @@ class VIRL:
         try:
             r = requests.post(u, headers=headers, data=json.dumps(body), verify=False)
             if r.status_code != 200:
-                logger.warning('Failed to get token on server ' + virl_server + ' Code: ' + str(r.status_code))
+                print('Failed to get token on server ' + virl_server + ' Code: ' + str(r.status_code))
                 return False
             else:
                 self.bearer_token = json.loads(r.text)
                 return True
         except Exception as e:
-            logger.warning(e)
+            print(e)
             return False
 
     def get_diagnostics(self):
-        logger = logging.getLogger(__name__)
         api_path = '/api/v0/diagnostics'
         u = self.url + api_path
         headers = {
@@ -57,18 +54,17 @@ class VIRL:
         try:
             r = requests.get(u, headers=headers, verify=False)
             if r.status_code != 200:
-                logger.warning('Failed to get server diagnostics ' + virl_server + ' Code: ' + str(r.status_code))
+                print('Failed to get server diagnostics ' + virl_server + ' Code: ' + str(r.status_code))
                 return False
             else:
                 r_utf = r.content.decode()
                 self.diagnostics = json.loads(r_utf)
                 return True
         except Exception as e:
-            logger.warning(e)
+            print(e)
             return False
 
     def delete_lab(self, lab_id):
-        logger = logging.getLogger(__name__)
         api_path = '/api/v0/labs/' + lab_id
         u = self.url + api_path
         headers = {
@@ -83,11 +79,10 @@ class VIRL:
             self.delete_result = json.loads(r_utf)
             return True
         except Exception as e:
-            logger.warning(e)
+            print(e)
             return False
 
     def stop_lab(self, lab_id):
-        logger = logging.getLogger(__name__)
         api_path = '/api/v0/labs/' + lab_id + '/stop'
         u = self.url + api_path
         headers = {
@@ -102,11 +97,10 @@ class VIRL:
             self.stop_result = json.loads(r_utf)
             return True
         except Exception as e:
-            logger.warning(e)
+            print(e)
             return False
 
     def wipe_lab(self, lab_id):
-        logger = logging.getLogger(__name__)
         api_path = '/api/v0/labs/' + lab_id + '/wipe'
         u = self.url + api_path
         headers = {
@@ -121,7 +115,7 @@ class VIRL:
             self.wipe_result = json.loads(r_utf)
             return True
         except Exception as e:
-            logger.warning(e)
+            print(e)
             return False
 
     def parse_diagnostic_for_old_labs(self):
@@ -155,7 +149,6 @@ class WebEx:
         self.user_id = ''
 
     def get_id_from_email(self, webex_email):
-        logger = logging.getLogger(__name__)
         uri = 'https://api.ciscospark.com/v1/people?email=' + webex_email
         headers = {
             'Content-Type': 'application/json',
@@ -164,22 +157,21 @@ class WebEx:
         try:
             r = requests.get(uri, headers=headers, verify=False)
             if r.status_code != 200:
-                logger.warning('Failed to connect to WebEx Teams API ' + virl_server + ' Code: ' + str(r.status_code))
+                print('Failed to connect to WebEx Teams API ' + virl_server + ' Code: ' + str(r.status_code))
                 return False
             r_utf = r.content.decode()
             if not json.loads(r_utf)['items']:
-                logger.warning(
+                print(
                     'Failed to find user WebEx Teams API ' + webex_email + ' on ' + virl_server + ' Code: ' + str(
                         r.status_code))
                 return False
             self.user_id = json.loads(r_utf)['items'][0]['id']
             return True
         except Exception as e:
-            logger.warning(e)
+            print(e)
             return False
 
     def send_message(self, message):
-        logger = logging.getLogger(__name__)
         uri = 'https://api.ciscospark.com/v1/messages'
         headers = {
             'Content-Type': 'application/json',
@@ -193,7 +185,7 @@ class WebEx:
             r = requests.post(uri, headers=headers, data=json.dumps(body), verify=False)
             return True
         except Exception as e:
-            logger.warning(e)
+            print(e)
             return False
 
 
@@ -206,9 +198,6 @@ if __name__ == '__main__':
     MONGO_COLLECTIONS = os.environ['MONGO_COLLECTIONS']
     mongo_url = 'mongodb://' + MONGO_INITDB_ROOT_USERNAME + ':' + MONGO_INITDB_ROOT_PASSWORD + '@' + MONGO_SERVER + ':' + MONGO_PORT
 
-    FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(format=FORMAT, filename="{0}/{1}.log".format('./', 'VIRL_alert'), level=logging.INFO)
-    logger = logging.getLogger(__name__)
     bearer_token = os.environ['ACCESS_TOKEN']
     virl_username = os.environ['VIRL_USERNAME']
     virl_password = os.environ['VIRL_PASSWORD']
@@ -249,7 +238,7 @@ if __name__ == '__main__':
                                 r = posts.delete_many(delete_lab_filter)
                             except Exception as e:
                                 print('Could not remove stale records from DB')
-                                logger.warning(e)
+                                print(e)
                                 continue
 
                     # Main process old lab for messaging and possible termination
@@ -277,7 +266,7 @@ if __name__ == '__main__':
                                         result = posts.find_one(query_lab_filter)  # Q: Is this lab already in DB?
                                     except Exception as e:
                                         print('Failed to connect to DB')
-                                        logger.warning(e)
+                                        print(e)
                                         continue
 
                                     if result is None:  # A: Nope
@@ -291,7 +280,7 @@ if __name__ == '__main__':
                                                 seconds) + ' seconds' + '\n'
                                         except Exception as e:
                                             print('Failed to connect to DB')
-                                            logger.warning(e)
+                                            print(e)
                                             continue
                                     elif (alert_timer_seconds > (epoch_time_now - result['warning_date'])) and result[
                                         'renewal_flag'] is True:  # Q: Been renewed and less than alert_time
@@ -311,7 +300,7 @@ if __name__ == '__main__':
                                                 seconds) + ' seconds' + '\n'
                                         except Exception as e:
                                             print('Failed to connect to DB')
-                                            logger.warning(e)
+                                            print(e)
                                             continue
                                     elif dead_timer_seconds > (epoch_time_now - result[
                                         'warning_date']):  # Q: Past alert_time but less than dead time
@@ -333,31 +322,31 @@ if __name__ == '__main__':
                                             message += 'IN TEST MODE = NOT REALLY TERMINATED        ** TERMINATED Lab Id ' + \
                                                        lab['lab'] + '\n'
                                             # if virl.stop_lab(lab['lab']):  # This will delete labs from VIRL
-                                            #     logger.info('User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab['lab'] + 'STOPPED')
+                                            #     print('User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab['lab'] + 'STOPPED')
                                             #     if virl.wipte_lab(lab['lab']):  # This will delete labs from VIRL
-                                            #         logger.info('User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab['lab'] + 'WIPED')
+                                            #         print('User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab['lab'] + 'WIPED')
                                             #         if virl.delete_lab(lab['lab']):  # This will delete labs from VIRL
-                                            #             logger.info(
+                                            #             print(
                                             #                 'User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab[
                                             #                     'lab'] + 'TERMINATED')
                                             # else:
-                                            #     logger.info(
+                                            #     print(
                                             #         'User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab[
                                             #             'lab'] + 'ERROR TERMINATING')
                                         except Exception as e:
                                             print('Failed to connect to DB')
-                                            logger.warning(e)
+                                            print(e)
                                             continue
                                 message += 'TEST Unless already TERMINATED, You can extend the life of your lab. Please message me "@COLABot VIRL extend lab $lab_id"\n            ** Example - "@COLABot VIRL extend lab a1234z"'
                                 message += '\n\nPerhaps you would consider using the "VIRL delete lab" command to free server resources.'
                                 message += "\nType 'help' to see how I can assist you"
                                 web.send_message(message)
                                 # print(message)
-                                logging.info('User ' + k + ' : ' + message)
+                                print('User ' + k + ' : ' + message)
             # for post in posts.find():
             #     print(post)
         except Exception as e:
             print('Exception in body')
-            logger.warning(e)
+            print(e)
         gc.collect(generation=2)
         time.sleep(program_loop_seconds)
