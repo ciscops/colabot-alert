@@ -348,7 +348,7 @@ if __name__ == '__main__':
                                             print('Failed to connect to DB')
                                             logger.warning(e)
                                             continue
-                                message += 'TEST Unless already TERMINATED, You can extend the life of your lab. Please message me "@COLABot VIRL extend lab $lab_id on $server_name"\n            ** Example - "@COLABot VIRL extend lab a1234z on cpn-rtp-virl5.ciscops.net"'
+                                message += 'TEST Unless already TERMINATED, You can extend the life of your lab. Please message me "@COLABot VIRL extend lab $lab_id"\n            ** Example - "@COLABot VIRL extend lab a1234z"'
                                 message += '\n\nPerhaps you would consider using the "VIRL delete lab" command to free server resources.'
                                 message += "\nType 'help' to see how I can assist you"
                                 web.send_message(message)
