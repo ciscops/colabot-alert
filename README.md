@@ -1,5 +1,5 @@
 # colabot-alert
-Alerts WebEx Teams users with labs running over 48 hours
+Alerts WebEx Teams users with labs running over 8 hours
 
 ## Deploying locally with docker-compose
 ### Environment Config
@@ -11,16 +11,8 @@ ACCESS_TOKEN=[YOUR ACCESS TOKEN]
 SERVER_LIST=server1.example.com,server2.example.com,server3.example.com
 VIRL_USERNAME=virl
 VIRL_PASSWORD=foo
-MONGO_INITDB_ROOT_USERNAME=cisco
-MONGO_INITDB_ROOT_PASSWORD=password
-MONGO_SERVER=mongodb.example.com
-MONGO_PORT=27017
-MONGO_PORT=27017
-MONGO_DB=myproject
-MONGO_COLLECTIONS=documents
 PROGRAM_LOOP_HOURS=4
-ALERT_TIMER_HOURS=24  # Hours before owner of lab needs to extend lab time
-DEAD_TIMER_HOURS=48  # Hours after owner was notified before lab is terminated
+ALERT_TIMER_HOURS=8  # Hours before owner of lab needs to extend lab time
 # note .env is a shell file so there can't be spaces around =
 ```
 Build and run the bot:
