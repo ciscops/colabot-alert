@@ -1,11 +1,9 @@
 import gc
-import pymongo
 import json
 import time
 import os
 import requests
 import urllib3
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -126,10 +124,23 @@ class VIRL:
             temp_list = list()
             if len(labs) > 0:
                 for x in labs:
-                    created_seconds = int(self.diagnostics['labs'][x]['created'])
-                    seconds = epoch_time_now - created_seconds
-                    if seconds > self.alert_timer_seconds:
-                        temp_list.append(dict(lab=x, uptime=seconds, created_seconds=created_seconds))
+                    nodes = self.diagnostics['labs'][x].get('nodes')
+                    running_flag = False
+                    max_running = 0
+                    for node in nodes:
+                        if self.diagnostics['labs'][x]['nodes'][node]['state'] == 'DEFINED_ON_CORE' or \
+                                self.diagnostics['labs'][x]['nodes'][node]['state'] == 'STOPPED':
+                            pass
+                        else:
+                            running_flag = True
+                            if self.diagnostics['labs'][x]['nodes'][node]['state_times'].get('BOOTED', 0) > max_running:
+                                max_running = self.diagnostics['labs'][x]['nodes'][node]['state_times'].get('BOOTED', 0)
+                    if running_flag and max_running > self.alert_timer_seconds:
+                        created_seconds = int(self.diagnostics['labs'][x]['created'])
+                        seconds = epoch_time_now - created_seconds
+                        temp_list.append(
+                            dict(lab=x, uptime=seconds, created_seconds=created_seconds, max_running=max_running))
+
                 if len(temp_list) > 0:
                     email_add = self.diagnostics['user_list'][k]['fullname']
                     if email_add:
@@ -179,7 +190,7 @@ class WebEx:
         }
         body = {
             "toPersonId": self.user_id,
-            "text": message,
+            "markdown": message,
         }
         try:
             r = requests.post(uri, headers=headers, data=json.dumps(body), verify=False)
@@ -190,14 +201,6 @@ class WebEx:
 
 
 if __name__ == '__main__':
-    MONGO_INITDB_ROOT_USERNAME = os.environ['MONGO_INITDB_ROOT_USERNAME']
-    MONGO_INITDB_ROOT_PASSWORD = os.environ['MONGO_INITDB_ROOT_PASSWORD']
-    MONGO_SERVER = os.environ['MONGO_SERVER']
-    MONGO_PORT = os.environ['MONGO_PORT']
-    MONGO_DB = os.environ['MONGO_DB']
-    MONGO_COLLECTIONS = os.environ['MONGO_COLLECTIONS']
-    mongo_url = 'mongodb://' + MONGO_INITDB_ROOT_USERNAME + ':' + MONGO_INITDB_ROOT_PASSWORD + '@' + MONGO_SERVER + ':' + MONGO_PORT
-
     bearer_token = os.environ['ACCESS_TOKEN']
     virl_username = os.environ['VIRL_USERNAME']
     virl_password = os.environ['VIRL_PASSWORD']
@@ -205,146 +208,46 @@ if __name__ == '__main__':
 
     program_loop_hours = float(os.environ['PROGRAM_LOOP_HOURS'])
     alert_timer_hours = float(os.environ['ALERT_TIMER_HOURS'])  # default hours for lab without request for extension
-    dead_timer_hours = float(os.environ['DEAD_TIMER_HOURS'])  # hours after alert time until termination without extens
 
     program_loop_seconds = program_loop_hours * 60 * 60
     alert_timer_seconds = alert_timer_hours * 60 * 60
-    dead_timer_seconds = dead_timer_hours * 60 * 60
 
     while True:
         try:
-            epoch_time_now = int(time.time())
-            with pymongo.MongoClient(mongo_url) as client:
-                db = client[MONGO_DB]
-                posts = db[MONGO_COLLECTIONS]
+            for virl_server in virl_servers:
+                virl = VIRL(virl_username, virl_password, virl_server, alert_timer_seconds)
+                if not virl.get_token():
+                    continue
+                if not virl.get_diagnostics():
+                    continue
+                virl.parse_diagnostics_for_all_labs()
 
-                for virl_server in virl_servers:
-                    virl = VIRL(virl_username, virl_password, virl_server, alert_timer_seconds)
-                    if not virl.get_token():
-                        continue
-                    if not virl.get_diagnostics():
-                        continue
-                    virl.parse_diagnostics_for_all_labs()
-
-                    # Reconcile DB with reality of VIRL server
-                    db_per_server_labs = list()
-                    for post in posts.find({'server': virl_server}):
-                        db_per_server_labs.append(post['lab_id'])
-                    for lab in db_per_server_labs:
-                        if lab not in virl.all_labs:
-                            delete_lab_filter = {'server': virl_server, 'lab_id': lab}
-                            print('lab deleted')
-                            try:
-                                r = posts.delete_many(delete_lab_filter)
-                            except Exception as e:
-                                print('Could not remove stale records from DB')
-                                print(e)
+                virl.parse_diagnostic_for_old_labs()
+                if virl.old_labs_results_list:
+                    for user in virl.old_labs_results_list:
+                        web = WebEx(bearer_token)
+                        message = 'You have running lab(s) on VIRL server ' + virl_server + ' \n'
+                        for k in user:
+                            webex_email = k
+                            if not web.get_id_from_email(webex_email):  # web.user_id
                                 continue
-
-                    # Main process old lab for messaging and possible termination
-                    virl.parse_diagnostic_for_old_labs()
-                    if virl.old_labs_results_list:
-                        for user in virl.old_labs_results_list:
-                            web = WebEx(bearer_token)
-                            message = 'Your VIRL labs on server ' + virl_server + ' are over {} hours old: \n'.format(
-                                alert_timer_hours)
-                            for k in user:
-                                webex_email = k
+                            for lab in user[webex_email]:
+                                delta = lab.get('max_running', 0)
+                                days = int(delta // 86400)
+                                hours = int(delta // 3600 % 24)
+                                minutes = int(delta // 60 % 60)
+                                seconds = int(delta % 60)
                                 if not web.get_id_from_email(webex_email):  # web.user_id
                                     continue
-                                for lab in user[webex_email]:
-                                    delta = epoch_time_now - lab['created_seconds']  # total time since lab was deployed
-                                    days = int(delta // 86400)
-                                    hours = int(delta // 3600 % 24)
-                                    minutes = int(delta // 60 % 60)
-                                    seconds = int(delta % 60)
+                                message += ' - Lab Id: ' + lab['lab'] + ' Uptime: ' + str(
+                                    days) + ' days ' + str(hours) + ' hours ' + str(minutes) + ' minutes ' + str(
+                                    seconds) + ' seconds' + '\n'
 
-                                    query_lab_filter = {'server': virl_server,
-                                                        'user_id': web.user_id,
-                                                        'lab_id': lab['lab']}
-                                    try:
-                                        result = posts.find_one(query_lab_filter)  # Q: Is this lab already in DB?
-                                    except Exception as e:
-                                        print('Failed to connect to DB')
-                                        print(e)
-                                        continue
-
-                                    if result is None:  # A: Nope
-                                        query_lab_filter['warning_date'] = epoch_time_now
-                                        query_lab_filter['renewal_flag'] = False
-                                        try:
-                                            post_id = posts.insert_one(query_lab_filter).inserted_id
-                                            message += '        ** Lab Id ' + lab['lab'] + ': AGE =' + str(
-                                                days) + ' days ' + str(
-                                                hours) + ' hours ' + str(minutes) + ' minutes ' + str(
-                                                seconds) + ' seconds' + '\n'
-                                        except Exception as e:
-                                            print('Failed to connect to DB')
-                                            print(e)
-                                            continue
-                                    elif (alert_timer_seconds > (epoch_time_now - result['warning_date'])) and result[
-                                        'renewal_flag'] is True:  # Q: Been renewed and less than alert_time
-                                        pass
-                                    elif (alert_timer_seconds < (epoch_time_now - result['warning_date'])) and result[
-                                        'renewal_flag'] is True:  # Q: Been renewed but now again past alert_time
-                                        try:
-                                            doc = posts.find_one_and_update(
-                                                {'_id': result['_id']},
-                                                {'$set': {'warning_date': epoch_time_now, 'renewal_flag': False}
-                                                 }
-                                            )
-                                            result = posts.find_one(query_lab_filter)
-                                            message += '        ** Lab Id ' + lab['lab'] + ': AGE =' + str(
-                                                days) + ' days ' + str(
-                                                hours) + ' hours ' + str(minutes) + ' minutes ' + str(
-                                                seconds) + ' seconds' + '\n'
-                                        except Exception as e:
-                                            print('Failed to connect to DB')
-                                            print(e)
-                                            continue
-                                    elif dead_timer_seconds > (epoch_time_now - result[
-                                        'warning_date']):  # Q: Past alert_time but less than dead time
-                                        life_delta = epoch_time_now - result[
-                                            'warning_date']  # Time since last warning or update
-                                        to_death_delta = dead_timer_seconds - life_delta
-
-                                        dead_days = int(to_death_delta // 86400)
-                                        dead_hours = int(to_death_delta // 3600 % 24)
-                                        dead_minutes = int(to_death_delta // 60 % 60)
-                                        dead_seconds = int(to_death_delta % 60)
-                                        message += 'TEST        ** TERMINATION WARNING! Lab Id ' + lab[
-                                            'lab'] + ': DEAD IN ' + str(dead_days) + ' days ' + str(
-                                            dead_hours) + ' hours ' + str(dead_minutes) + ' minutes ' + str(
-                                            dead_seconds) + ' seconds' + '\n'
-                                    else:  # These labs are getting terminated
-                                        try:
-                                            r = posts.delete_one(query_lab_filter)
-                                            message += 'IN TEST MODE = NOT REALLY TERMINATED        ** TERMINATED Lab Id ' + \
-                                                       lab['lab'] + '\n'
-                                            # if virl.stop_lab(lab['lab']):  # This will delete labs from VIRL
-                                            #     print('User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab['lab'] + 'STOPPED')
-                                            #     if virl.wipte_lab(lab['lab']):  # This will delete labs from VIRL
-                                            #         print('User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab['lab'] + 'WIPED')
-                                            #         if virl.delete_lab(lab['lab']):  # This will delete labs from VIRL
-                                            #             print(
-                                            #                 'User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab[
-                                            #                     'lab'] + 'TERMINATED')
-                                            # else:
-                                            #     print(
-                                            #         'User: ' + user + ' Server: ' + virl_server + ' Lab: ' + lab[
-                                            #             'lab'] + 'ERROR TERMINATING')
-                                        except Exception as e:
-                                            print('Failed to connect to DB')
-                                            print(e)
-                                            continue
-                                message += 'TEST Unless already TERMINATED, You can extend the life of your lab. Please message me "@COLABot VIRL extend lab $lab_id"\n            ** Example - "@COLABot VIRL extend lab a1234z"'
-                                message += '\n\nPerhaps you would consider using the "VIRL delete lab" command to free server resources.'
-                                message += "\nType 'help' to see how I can assist you"
-                                web.send_message(message)
-                                # print(message)
-                                print('User ' + k + ' : ' + message)
-            # for post in posts.find():
-            #     print(post)
+                            message += '\n\nPlease consider using the ***"VIRL stop lab"*** or '
+                            message += '***"VIRL delete lab"*** commands to free server resources. \n\n'
+                            message += 'Type "help" to see how I can assist you'
+                            web.send_message(message)
+                            print('User ' + k + ' : ' + message)
         except Exception as e:
             print('Exception in body')
             print(e)
