@@ -201,6 +201,7 @@ class WebEx:
 
 
 if __name__ == '__main__':
+    print('Starting...')
     bearer_token = os.environ['ACCESS_TOKEN']
     virl_username = os.environ['VIRL_USERNAME']
     virl_password = os.environ['VIRL_PASSWORD']
