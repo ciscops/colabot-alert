@@ -22,7 +22,7 @@ spec:
 ''') {
     node(POD_LABEL) {
         def colabot
-        git 'https://github.com/ciscops/colabot.git'
+        git 'https://github.com/ciscops/colabot-alert.git'
         container('docker') {
             stage('Clone repository') {
                 checkout scm
