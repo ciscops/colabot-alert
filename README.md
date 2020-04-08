@@ -3,9 +3,7 @@ Alerts VIRL simulation users with labs running over 8 hours via WebEx Teams
 
 ## Deploying locally with docker-compose
 ### Environment Config
-store your secrets and config variables in here
-only invited collaborators will be able to see your .env values
-reference these in your code with process.env.SECRET
+The alert script requires the below environment variables:
 ```
 ACCESS_TOKEN=[YOUR ACCESS TOKEN]
 SERVER_LIST=server1.example.com,server2.example.com,server3.example.com
