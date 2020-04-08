@@ -1,5 +1,5 @@
 # colabot-alert
-Alerts WebEx Teams users with labs running over 8 hours
+Alerts VIRL simulation users with labs running over 8 hours via WebEx Teams 
 
 ## Deploying locally with docker-compose
 ### Environment Config
