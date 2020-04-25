@@ -1,8 +1,8 @@
 # colabot-alert
-Alerts VIRL simulation users with labs running over 8 hours via WebEx Teams 
+Alerts VIRL simulation users with labs running over os.environ['ALERT_TIMER_HOURS'] of hours via WebEx Teams 
 
-## Deploying locally with docker-compose
-### Environment Config
+## Deployment
+#### Local
 The alert script requires the below environment variables:
 ```
 ACCESS_TOKEN=[YOUR ACCESS TOKEN]
@@ -17,3 +17,11 @@ Build and run the bot:
 ```
 docker-compose up
 ```
+#### Pipeline
+Ideally this repository is linked to the CPN COLABot Jenkins instance, in which a pipeline has been created enabling
+automatic deployment when new code is pushed to the repository.
+
+## Operation
+This script executes every os.environ['PROGRAM_LOOP_HOURS'] and checks VIRL servers, os.environ['SERVER_LIST'].split(','),
+for labs with uptime over os.environ['ALERT_TIMER_HOURS']. If labs are over os.environ['ALERT_TIMER_HOURS'], a 
+WebEx Teams message is sent to the user from the WebEx Teams account with token os.environ['ACCESS_TOKEN'].
