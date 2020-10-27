@@ -166,7 +166,7 @@ class WebEx:
             "Authorization": "Bearer " + self.webex_token
         }
         try:
-            r = requests.get(uri, headers=headers, verify=False)
+            r = requests.get(uri, headers=headers)
             if r.status_code != 200:
                 print('Failed to connect to WebEx Teams API ' + virl_server + ' Code: ' + str(r.status_code))
                 return False
@@ -193,7 +193,7 @@ class WebEx:
             "markdown": message,
         }
         try:
-            r = requests.post(uri, headers=headers, data=json.dumps(body), verify=False)
+            r = requests.post(uri, headers=headers, data=json.dumps(body))
             return True
         except Exception as e:
             print(e)
